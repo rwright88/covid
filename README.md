@@ -4,9 +4,9 @@ Coronavirus in Pennsylvania.
 
 ## Required packages
 
+- dash
 - numpy
 - pandas
-- plotly
 
 ## Sources
 
