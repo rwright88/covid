@@ -13,7 +13,7 @@ def get_data(n=7):
     cases = get_county(in_cases, value_name="cases")
     deaths = get_county(in_deaths, value_name="deaths")
     df = pd.merge(cases, deaths, how="left", on=["fips", "county", "state", "date"])
-    df = get_states(df)
+    df = get_state(df)
     df = calc_stats(df, n=n)
     return df
 
@@ -48,18 +48,23 @@ def fix_string(x):
     return x.str.lower().str.strip()
 
 
-def get_states(df):
+def get_state(df):
     """Get state data from county data"""
     cw = pd.read_csv(IN_GEO)
     cw["state_code"] = cw["state_code"].str.lower()
     df = pd.merge(df, cw, how="left", left_on="state", right_on="state_name")
-    cols = ["fips", "state_code", "county", "date", "pop", "cases", "deaths"]
-    df = df[cols]
-    states = df.groupby(["state_code", "date"]).sum().reset_index()
-    states["fips"] = ""
-    states["county"] = ""
-    states = states[cols]
-    df = pd.concat([df, states], ignore_index=True)
+    df_cols = ["fips", "state_code", "county", "date", "pop", "cases", "deaths"]
+    df = df[df_cols]
+    state = df.groupby(["state_code", "date"]).sum().reset_index()
+    state_cols = state.columns.tolist()
+    us = state.groupby("date").sum().reset_index()
+    us["state_code"] = "us"
+    us = us[state_cols]
+    state = pd.concat([state, us], ignore_index=True)
+    state["fips"] = ""
+    state["county"] = ""
+    state = state[df_cols]
+    df = pd.concat([df, state], ignore_index=True)
     df["name"] = combine_state_county(df["state_code"], df["county"])
     df = df[["fips", "name", "date", "pop", "cases", "deaths"]]
     return df
@@ -85,7 +90,6 @@ def calc_stats(df, n=7):
     out = pd.concat(out, ignore_index=True)
     for col in cols_to_rate:
         out[col + "_pm"] = out[col] / out["pop"] * 1e06
-    out = out.round(1)
     return out
 
 

@@ -54,6 +54,8 @@ def plot_trend(y, names=None, title=None):
     """Create trend plot of y by name"""
     if isinstance(names, str):
         names = [names]
+    elif len(names) == 0:
+        names = NAMES0[:1]
     df = DF[DF["name"].isin(names)]
     fig = px.line(df, x="date", y=y, color="name", height=450)
     layout = LAYOUT.copy()

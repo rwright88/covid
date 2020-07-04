@@ -16,6 +16,7 @@ if __name__ == "__main__":
     if not os.path.isdir(dir_name):
         os.makedirs(dir_name, exist_ok=True)
     df = cp.get_data(n=N)
+    df = df.round(2)
     df.to_csv(OUT_US, index=False)
     pa = df[(df["name"] == "pa") | df["name"].str.contains("pa, ")]
     pa.to_csv(OUT_PA, index=False)
