@@ -2,6 +2,7 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_table
 from dash.dependencies import Input, Output
 import plotly.express as px
 import pandas as pd
@@ -11,20 +12,32 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 DF = pd.read_csv("out/us.csv")
 NAMES = [{"label": x, "value": x} for x in DF["name"].unique().tolist()]
-NAMES0 = ["pa", "pa, philadelphia"]
+NAMES_INITIAL = ["us", "pa", "pa, philadelphia"]
+NOTE = (
+    "Last updated July 4. Cases and deaths available for states and counties."
+    " Tests available for states."
+)
+LABEL = (
+    "Choose any number of states (two-letter code)"
+    " or counties (two-letter code, county name):"
+)
 CONFIG = {"displayModeBar": False}
+
 
 app.layout = html.Div(
     style={"max-width": 1000, "margin-left": "auto", "margin-right": "auto"},
     children=[
-        html.H1(children="Pennsylvania COVID-19 data"),
-        html.Label("Choose state or county:"),
-        dcc.Dropdown(id="ids", options=NAMES, value=NAMES0, multi=True),
-        dcc.Graph(id="cases-pm", config=CONFIG),
+        html.H1(children="US COVID-19 data"),
+        html.P(children=NOTE),
+        html.Label(LABEL),
+        dcc.Dropdown(id="ids", options=NAMES, value=NAMES_INITIAL, multi=True),
         dcc.Graph(id="cases-ac-pm", config=CONFIG),
-        dcc.Graph(id="deaths-pm", config=CONFIG),
+        dcc.Graph(id="cases-pm", config=CONFIG),
+        dcc.Graph(id="tests-ac-pm", config=CONFIG),
+        dcc.Graph(id="tests-pm", config=CONFIG),
         dcc.Graph(id="deaths-ac-pm", config=CONFIG),
-    ]
+        dcc.Graph(id="deaths-pm", config=CONFIG),
+    ],
 )
 
 LAYOUT = {
@@ -55,7 +68,7 @@ def plot_trend(y, names=None, title=None):
     if isinstance(names, str):
         names = [names]
     elif len(names) == 0:
-        names = NAMES0[:1]
+        names = NAMES_INITIAL[:1]
     df = DF[DF["name"].isin(names)]
     fig = px.line(df, x="date", y=y, color="name", height=450)
     layout = LAYOUT.copy()
@@ -65,28 +78,40 @@ def plot_trend(y, names=None, title=None):
     return fig
 
 
+@app.callback(Output("cases-ac-pm", "figure"), [Input("ids", "value")])
+def plot_cases_ac_pm(names):
+    title = "Average daily new cases in the last 7 days per million"
+    return plot_trend(y="cases_ac_pm", names=names, title=title)
+
+
 @app.callback(Output("cases-pm", "figure"), [Input("ids", "value")])
 def plot_cases_pm(names):
     title = "Total cases per million"
     return plot_trend(y="cases_pm", names=names, title=title)
 
 
-@app.callback(Output("cases-ac-pm", "figure"), [Input("ids", "value")])
-def plot_cases_ac_pm(names):
-    title = "Average daily cases in the last 7 days per million"
-    return plot_trend(y="cases_ac_pm", names=names, title=title)
+@app.callback(Output("tests-ac-pm", "figure"), [Input("ids", "value")])
+def plot_tests_ac_pm(names):
+    title = "Average daily new tests in the last 7 days per million"
+    return plot_trend(y="tests_ac_pm", names=names, title=title)
+
+
+@app.callback(Output("tests-pm", "figure"), [Input("ids", "value")])
+def plot_tests_pm(names):
+    title = "Total tests per million"
+    return plot_trend(y="tests_pm", names=names, title=title)
+
+
+@app.callback(Output("deaths-ac-pm", "figure"), [Input("ids", "value")])
+def plot_deaths_ac_pm(names):
+    title = "Average daily new deaths in the last 7 days per million"
+    return plot_trend(y="deaths_ac_pm", names=names, title=title)
 
 
 @app.callback(Output("deaths-pm", "figure"), [Input("ids", "value")])
 def plot_deaths_pm(names):
     title = "Total deaths per million"
     return plot_trend(y="deaths_pm", names=names, title=title)
-
-
-@app.callback(Output("deaths-ac-pm", "figure"), [Input("ids", "value")])
-def plot_deaths_ac_pm(names):
-    title = "Average daily deaths in the last 7 days per million"
-    return plot_trend(y="deaths_ac_pm", names=names, title=title)
 
 
 if __name__ == "__main__":
