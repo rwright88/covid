@@ -15,6 +15,7 @@ if __name__ == "__main__":
     if not os.path.isdir(dir_name):
         os.makedirs(dir_name, exist_ok=True)
     df = cp.get_data(n=N)
+    df = df[df["pop"].notna()]
     df = df.round(2)
     df.to_csv(OUT_DATA, index=False)
 

@@ -1,6 +1,5 @@
 """Functions to create datasets."""
 # TODO: Should county rows with missing code or name be excluded? (currently yes)
-# TODO: County sums don't always equal state
 
 import io
 
@@ -17,29 +16,45 @@ IN_COUNTRY_POP = (
 )
 IN_COUNTY_CASES = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv"
 IN_COUNTY_DEATHS = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv"
+IN_STATE = "http://covidtracking.com/api/states/daily.csv"
 IN_STATE_CW = "data/state-postal.csv"
-IN_STATE_TESTS = "http://covidtracking.com/api/states/daily.csv"
+IN_STATE_POP = "https://en.wikipedia.org/wiki/List_of_states_and_territories_of_the_United_States_by_population"
 
 
 def get_data(n=7):
-    """Get cases, deaths, and tests data"""
+    """Get cases, deaths, and tests data for countries, states, and counties"""
     county_cases = get_county(IN_COUNTY_CASES, value_name="cases")
     county_deaths = get_county(IN_COUNTY_DEATHS, value_name="deaths")
     by = ["code", "county", "state", "date"]
     df = pd.merge(county_cases, county_deaths, how="left", on=by)
+    cw = pd.read_csv(IN_STATE_CW)
+    cw["state_code"] = fix_string(cw["state_code"])
+    df = pd.merge(df, cw, how="left", left_on="state", right_on="state_name")
+    df["name"] = [s + ", " + c for s, c in zip(df["state_code"], df["county"])]
     df["type"] = "county"
-    df = sum_state(df)
-    tests = get_state_testing(IN_STATE_TESTS)
-    df = pd.merge(df, tests, how="left", on=["name", "date"])
-    df = sum_us(df)
+    df = df[["type", "code", "name", "date", "pop", "cases", "deaths"]]
+
+    state = get_state(IN_STATE)
+    state_pop = get_state_pop(IN_STATE_POP)
+    state_pop = pd.merge(
+        state_pop, cw, how="left", left_on="name", right_on="state_name"
+    )
+    state_pop = state_pop[["state_code", "pop"]]
+    state = pd.merge(
+        state, state_pop, how="left", left_on="name", right_on="state_code"
+    ).drop("state_code", axis=1)
+    df = pd.concat([df, state], ignore_index=True)
+
+    us_tests = state[["date", "tests"]].groupby("date").sum().reset_index()
+    us_tests["name"] = "united states"
 
     country_cases = get_country(IN_COUNTRY_CASES, value_name="cases")
     country_deaths = get_country(IN_COUNTRY_DEATHS, value_name="deaths")
     country = pd.merge(country_cases, country_deaths, how="left", on=["name", "date"])
-    country = country[country["name"] != "us"]
     country["type"] = "country"
     country_pop = get_country_pop(IN_COUNTRY_POP)
     country = pd.merge(country, country_pop, how="left", on="name")
+    country = pd.merge(country, us_tests, how="left", on=["name", "date"])
     df = pd.concat([df, country], ignore_index=True)
 
     df = df[df["date"] >= "2020-03-01"]
@@ -61,49 +76,38 @@ def get_county(file1, value_name="cases"):
     df.columns = cols.keys()
     df = df[df["code"].notna() & df["county"].notna()]
     df = pd.melt(df, id_vars=cols_id, var_name="date", value_name=value_name)
-    df["code"] = fix_fips(df["code"])
+    df["code"] = [str(int(e)).zfill(5) for e in df["code"]]
+    df["county"] = fix_string(df["county"])
     df["date"] = pd.to_datetime(df["date"])
-    for col in ["county", "state"]:
-        df[col] = fix_string(df[col])
+    df["state"] = fix_string(df["state"])
     return df
 
 
-def sum_state(df):
-    """Sum state data from Johns Hopkins county data and combine"""
-    cw = pd.read_csv(IN_STATE_CW)
-    cw["state_code"] = cw["state_code"].str.lower()
-    df = pd.merge(df, cw, how="left", left_on="state", right_on="state_name")
-    df = df[["type", "code", "state_code", "county", "date", "pop", "cases", "deaths"]]
-    state = df.groupby(["state_code", "date"]).sum().reset_index()
-    state["type"] = "state"
-    df = pd.concat([df, state], ignore_index=True)
-    df["name"] = combine_state_county(df["type"], df["state_code"], df["county"])
-    df = df[["type", "code", "name", "date", "pop", "cases", "deaths"]]
-    return df
-
-
-def get_state_testing(url):
-    """Get state testing data from Covid Tracking project"""
+def get_state(url):
+    """Get state data from Covid Tracking project"""
     r = requests.get(url)
     data = io.StringIO(r.text)
     df = pd.read_csv(data)
-    df = df[["state", "date", "positive", "negative"]]
-    df.columns = ["name", "date", "cases", "negative"]
-    df["tests"] = df["cases"] + df["negative"]
-    df = df.drop(["cases", "negative"], axis=1)
+    df = df[["fips", "state", "date", "positive", "negative", "death"]]
+    df.columns = ["code", "name", "date", "cases", "negative", "deaths"]
+    df["code"] = [str(int(e)).zfill(2) for e in df["code"]]
     df["date"] = pd.to_datetime(df["date"].astype(str))
     df["name"] = fix_string(df["name"])
-    df = fill_dates(df, name="name")
+    df["tests"] = df["cases"] + df["negative"]
+    df["type"] = "state"
+    df = df[["type", "code", "name", "date", "cases", "tests", "deaths"]]
+    # df = fill_dates(df, name="name")
     return df
 
 
-def sum_us(df):
-    """Sum US data from state data and combine"""
-    state = df[df["type"] == "state"]
-    us = state.groupby("date").sum().reset_index()
-    us["name"] = "us"
-    us["type"] = "country"
-    df = pd.concat([df, us], ignore_index=True)
+def get_state_pop(url):
+    """Get state populations from Wikipedia"""
+    r = requests.get(url)
+    df = pd.read_html(r.text)[0]
+    df = df.iloc[:52, [2, 3]]
+    df.columns = ["name", "pop"]
+    df["name"] = fix_string(df["name"])
+    df["pop"] = pd.to_numeric(df["pop"])
     return df
 
 
@@ -151,10 +155,6 @@ def calc_stats(df, n=7):
     return out
 
 
-def fix_fips(x):
-    return [str(int(e)).zfill(5) for e in x]
-
-
 def fix_string(x):
     out = x.str.lower()
     out = out.str.replace("\[[^\]]*\]", "")
@@ -164,15 +164,11 @@ def fix_string(x):
 
 def fix_country(x):
     out = fix_string(x)
+    out[out == "czech republic"] = "czechia"
+    out[out == "burma"] = "myanmar"
     out[out == "korea, south"] = "south korea"
     out[out.str.contains("taiwan")] = "taiwan"
-    return out
-
-
-def combine_state_county(type1, state, county):
-    out = [
-        s + ", " + c if t == "county" else s for t, s, c in zip(type1, state, county)
-    ]
+    out[out == "us"] = "united states"
     return out
 
 
