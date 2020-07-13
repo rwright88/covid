@@ -1,10 +1,10 @@
 # covidpa
 
-Coronavirus in Pennsylvania.
+Create COVID-19 datasets.
 
 ## Required packages
 
-- dash
+- lxml
 - numpy
 - pandas
 - requests
