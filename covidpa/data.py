@@ -57,6 +57,12 @@ def get_data(n=7):
     country = pd.merge(country, us_tests, how="left", on=["name", "date"])
     df = pd.concat([df, country], ignore_index=True)
 
+    world = df[df["type"] == "country"].groupby("date").sum().reset_index()
+    world["name"] = "world"
+    world["type"] = "country"
+    world = world.drop("tests", axis=1)
+    df = pd.concat([df, world], ignore_index=True)
+
     df = df[df["date"] >= "2020-03-01"]
     df = calc_stats(df, n=n)
     return df
