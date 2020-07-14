@@ -12,7 +12,7 @@ from covidpa.utils import fill_dates
 IN_COUNTRY_CASES = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
 IN_COUNTRY_DEATHS = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
 IN_COUNTRY_POP = (
-    "https://en.wikipedia.org/wiki/List_of_countries_by_population_(United_Nations)"
+    "https://en.wikipedia.org/wiki/List_of_countries_and_dependencies_by_population"
 )
 IN_COUNTY_CASES = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv"
 IN_COUNTY_DEATHS = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv"
@@ -129,8 +129,8 @@ def get_country(file1, value_name="cases"):
 def get_country_pop(url):
     """Get country populations from Wikipedia"""
     r = requests.get(url)
-    df = pd.read_html(r.text)[3]
-    df = df.iloc[:, [0, 4]]
+    df = pd.read_html(r.text)[0]
+    df = df.iloc[:, [1, 2]]
     df.columns = ["name", "pop"]
     df["name"] = fix_country(df["name"])
     df["pop"] = pd.to_numeric(df["pop"])
