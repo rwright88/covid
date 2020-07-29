@@ -146,16 +146,17 @@ def get_country_pop(url):
 def calc_stats(df, n=7):
     """Calculate average daily change and per million stats"""
     df = df.sort_values("date")
-    cols_cume = ["cases", "tests", "deaths"]
-    cols_to_rate = ["cases", "tests", "deaths", "cases_ac", "tests_ac", "deaths_ac"]
     out = []
     ind = df.groupby(["type", "name"]).indices
     for k, v in ind.items():
         df1 = df.iloc[v].copy()
-        for col in cols_cume:
+        for col in ["cases", "tests", "deaths"]:
             df1[col + "_ac"] = average_change(df1[col], n=n)
         out.append(df1)
     out = pd.concat(out, ignore_index=True)
+    out["positivity"] = out["cases"] / out["tests"] * 100
+    out["positivity_ac"] = out["cases_ac"] / out["tests_ac"] * 100
+    cols_to_rate = ["cases", "tests", "deaths", "cases_ac", "tests_ac", "deaths_ac"]
     for col in cols_to_rate:
         out[col + "_pm"] = out[col] / out["pop"] * 1e06
     return out
