@@ -8,7 +8,7 @@ import pandas as pd
 import covidpa as cp
 
 N = 7
-OUT_DATA = "out/covid.csv"
+OUT_DATA = "../covidapp/data/covid.csv"
 
 if __name__ == "__main__":
     dir_name = os.path.dirname(OUT_DATA)
