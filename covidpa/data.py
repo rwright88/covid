@@ -139,7 +139,7 @@ def get_country_pop(url):
     df = df.iloc[:, [1, 2]]
     df.columns = ["name", "pop"]
     df["name"] = fix_country(df["name"])
-    df["pop"] = pd.to_numeric(df["pop"])
+    df["pop"] = pd.to_numeric(df["pop"], errors="coerce")
     return df
 
 
