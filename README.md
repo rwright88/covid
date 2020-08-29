@@ -1,4 +1,4 @@
-# covidpa
+# covid
 
 Create COVID-19 datasets.
 
