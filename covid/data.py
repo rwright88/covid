@@ -11,6 +11,7 @@ from covid.utils import fill_dates
 
 IN_COUNTRY_CASES = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
 IN_COUNTRY_DEATHS = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
+IN_COUNTRY_TESTS = "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv"
 IN_COUNTRY_POP = (
     "https://en.wikipedia.org/wiki/List_of_countries_and_dependencies_by_population"
 )
@@ -47,6 +48,8 @@ def get_data(n=7):
 
     us_tests = state[["date", "tests"]].groupby("date").sum().reset_index()
     us_tests["name"] = "united states"
+    country_tests = get_country_tests(IN_COUNTRY_TESTS)
+    country_tests = pd.concat([country_tests, us_tests], ignore_index=True)
 
     country_cases = get_country(IN_COUNTRY_CASES, value_name="cases")
     country_deaths = get_country(IN_COUNTRY_DEATHS, value_name="deaths")
@@ -54,7 +57,7 @@ def get_data(n=7):
     country["type"] = "country"
     country_pop = get_country_pop(IN_COUNTRY_POP)
     country = pd.merge(country, country_pop, how="left", on="name")
-    country = pd.merge(country, us_tests, how="left", on=["name", "date"])
+    country = pd.merge(country, country_tests, how="left", on=["name", "date"])
     df = pd.concat([df, country], ignore_index=True)
 
     world = df[df["type"] == "country"].groupby("date").sum().reset_index()
@@ -132,6 +135,17 @@ def get_country(file1, value_name="cases"):
     return df
 
 
+def get_country_tests(file1):
+    """Get tests country data from Our World in Data CSV file"""
+    cols = {"name": "location", "date": "date", "tests": "new_tests"}
+    df = pd.read_csv(file1)
+    df = df[cols.values()]
+    df.columns = cols.keys()
+    df["date"] = pd.to_datetime(df["date"])
+    df["name"] = fix_country(df["name"])
+    return df
+
+
 def get_country_pop(url):
     """Get country populations from Wikipedia"""
     r = requests.get(url)
@@ -172,6 +186,8 @@ def fix_string(x):
 def fix_country(x):
     out = fix_string(x)
     out[out == "czech republic"] = "czechia"
+    out[out == "democratic republic of congo"] = "dr congo"
+    out[out == "cote d'ivoire"] = "ivory coast"
     out[out == "burma"] = "myanmar"
     out[out == "korea, south"] = "south korea"
     out[out.str.contains("taiwan")] = "taiwan"
