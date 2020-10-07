@@ -49,6 +49,7 @@ def get_data(n=7):
     us_tests = state[["date", "tests"]].groupby("date").sum().reset_index()
     us_tests["name"] = "united states"
     country_tests = get_country_tests(IN_COUNTRY_TESTS)
+    country_tests = country_tests[country_tests["name"] != "united states"]
     country_tests = pd.concat([country_tests, us_tests], ignore_index=True)
 
     country_cases = get_country(IN_COUNTRY_CASES, value_name="cases")
@@ -137,7 +138,7 @@ def get_country(file1, value_name="cases"):
 
 def get_country_tests(file1):
     """Get tests country data from Our World in Data CSV file"""
-    cols = {"name": "location", "date": "date", "tests": "new_tests"}
+    cols = {"name": "location", "date": "date", "tests": "total_tests"}
     df = pd.read_csv(file1)
     df = df[cols.values()]
     df.columns = cols.keys()
@@ -185,7 +186,9 @@ def fix_string(x):
 
 def fix_country(x):
     out = fix_string(x)
-    out[out == "czech republic"] = "czechia"
+    out[out == "congo (brazzaville)"] = "congo"
+    out[out == "czechia"] = "czech republic"
+    out[out == "congo (kinshasa)"] = "dr congo"
     out[out == "democratic republic of congo"] = "dr congo"
     out[out == "cote d'ivoire"] = "ivory coast"
     out[out == "burma"] = "myanmar"
