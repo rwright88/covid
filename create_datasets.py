@@ -1,4 +1,4 @@
-"""Create datasets"""
+"""Create dataset, upload to S3, restart heroku dyno"""
 
 import os
 import subprocess
