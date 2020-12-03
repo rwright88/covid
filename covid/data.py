@@ -52,6 +52,9 @@ def get_data(n=7):
     country_tests = country_tests[country_tests["name"] != "united states"]
     country_tests = pd.concat([country_tests, us_tests], ignore_index=True)
 
+    us_hosp = state[["date", "hosp"]].groupby("date").sum().reset_index()
+    us_hosp["name"] = "united states"
+
     country_cases = get_country(IN_COUNTRY_CASES, value_name="cases")
     country_deaths = get_country(IN_COUNTRY_DEATHS, value_name="deaths")
     country = pd.merge(country_cases, country_deaths, how="left", on=["name", "date"])
@@ -59,15 +62,15 @@ def get_data(n=7):
     country_pop = get_country_pop(IN_COUNTRY_POP)
     country = pd.merge(country, country_pop, how="left", on="name")
     country = pd.merge(country, country_tests, how="left", on=["name", "date"])
+    country = pd.merge(country, us_hosp, how="left", on=["name", "date"])
     df = pd.concat([df, country], ignore_index=True)
 
     world = df[df["type"] == "country"].groupby("date").sum().reset_index()
     world["name"] = "world"
     world["type"] = "country"
-    world = world.drop("tests", axis=1)
+    world = world.drop(["tests", "hosp"], axis=1)
     df = pd.concat([df, world], ignore_index=True)
 
-    df = df[df["date"] >= "2020-03-01"]
     df = calc_stats(df, n=n)
     return df
 
@@ -98,13 +101,23 @@ def get_state(url):
     r = requests.get(url)
     data = io.StringIO(r.text)
     df = pd.read_csv(data)
-    df = df[["fips", "state", "date", "positive", "totalTestResults", "death"]]
-    df.columns = ["code", "name", "date", "cases", "tests", "deaths"]
+    col = {
+        "code": "fips",
+        "name": "state",
+        "date": "date",
+        "cases": "positive",
+        "deaths": "death",
+        "tests": "totalTestResults",
+        "hosp": "hospitalizedCurrently",
+    }
+    df = df[col.values()]
+    df.columns = col.keys()
     df["code"] = [str(int(e)).zfill(2) for e in df["code"]]
     df["date"] = pd.to_datetime(df["date"].astype(str))
     df["name"] = fix_string(df["name"])
+    col = df.columns.tolist()
     df["type"] = "state"
-    df = df[["type", "code", "name", "date", "cases", "tests", "deaths"]]
+    df = df[["type"] + col]
     # df = fill_dates(df, name="name")
     return df
 
@@ -164,13 +177,22 @@ def calc_stats(df, n=7):
     ind = df.groupby(["type", "name"]).indices
     for k, v in ind.items():
         df1 = df.iloc[v].copy()
-        for col in ["cases", "tests", "deaths"]:
+        for col in ["cases", "deaths", "tests"]:
             df1[col + "_ac"] = average_change(df1[col], n=n)
+        df1["hosp_a"] = df1["hosp"].rolling(n).mean()
         out.append(df1)
     out = pd.concat(out, ignore_index=True)
     out["positivity"] = out["cases"] / out["tests"] * 100
     out["positivity_ac"] = out["cases_ac"] / out["tests_ac"] * 100
-    cols_to_rate = ["cases", "tests", "deaths", "cases_ac", "tests_ac", "deaths_ac"]
+    cols_to_rate = [
+        "cases",
+        "deaths",
+        "tests",
+        "cases_ac",
+        "deaths_ac",
+        "tests_ac",
+        "hosp_a",
+    ]
     for col in cols_to_rate:
         out[col + "_pm"] = out[col] / out["pop"] * 1e06
     return out

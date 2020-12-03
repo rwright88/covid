@@ -23,7 +23,7 @@ def main():
     if not os.path.isdir(dir_name):
         os.makedirs(dir_name, exist_ok=True)
     df = covid.get_data(n=N)
-    df = df[df["pop"].notna()]
+    df = df[(df["date"] >= "2020-03-01") & df["pop"].notna()]
     df = df.round(2)
     print(f"Getting data took: {str(int(time.time() - t0))} seconds")
 
