@@ -98,12 +98,11 @@ def get_state(url):
     r = requests.get(url)
     data = io.StringIO(r.text)
     df = pd.read_csv(data)
-    df = df[["fips", "state", "date", "positive", "negative", "death"]]
-    df.columns = ["code", "name", "date", "cases", "negative", "deaths"]
+    df = df[["fips", "state", "date", "positive", "totalTestResults", "death"]]
+    df.columns = ["code", "name", "date", "cases", "tests", "deaths"]
     df["code"] = [str(int(e)).zfill(2) for e in df["code"]]
     df["date"] = pd.to_datetime(df["date"].astype(str))
     df["name"] = fix_string(df["name"])
-    df["tests"] = df["cases"] + df["negative"]
     df["type"] = "state"
     df = df[["type", "code", "name", "date", "cases", "tests", "deaths"]]
     # df = fill_dates(df, name="name")
@@ -201,4 +200,3 @@ def fix_country(x):
 def average_change(x, n=7):
     """Calculate average change"""
     return (x - x.shift(n)) / n
-
