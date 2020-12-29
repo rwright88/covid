@@ -48,12 +48,16 @@ def get_data(n=7):
 
     us_tests = state[["date", "tests"]].groupby("date").sum().reset_index()
     us_tests["name"] = "united states"
-    country_tests = get_country_tests(IN_COUNTRY_TESTS)
-    country_tests = country_tests[country_tests["name"] != "united states"]
+    country_tv = get_country_tests_vaccs(IN_COUNTRY_TESTS)
+    country_tests = country_tv[country_tv["name"] != "united states"].drop(
+        "vaccinations", axis=1
+    )
     country_tests = pd.concat([country_tests, us_tests], ignore_index=True)
 
     us_hosp = state[["date", "hosp"]].groupby("date").sum().reset_index()
     us_hosp["name"] = "united states"
+
+    country_vacc = country_tv.drop("tests", axis=1)
 
     country_cases = get_country(IN_COUNTRY_CASES, value_name="cases")
     country_deaths = get_country(IN_COUNTRY_DEATHS, value_name="deaths")
@@ -63,12 +67,13 @@ def get_data(n=7):
     country = pd.merge(country, country_pop, how="left", on="name")
     country = pd.merge(country, country_tests, how="left", on=["name", "date"])
     country = pd.merge(country, us_hosp, how="left", on=["name", "date"])
+    country = pd.merge(country, country_vacc, how="left", on=["name", "date"])
     df = pd.concat([df, country], ignore_index=True)
 
     world = df[df["type"] == "country"].groupby("date").sum().reset_index()
     world["name"] = "world"
     world["type"] = "country"
-    world = world.drop(["tests", "hosp"], axis=1)
+    world = world.drop(["tests", "hosp", "vaccinations"], axis=1)
     df = pd.concat([df, world], ignore_index=True)
 
     df = calc_stats(df, n=n)
@@ -148,9 +153,14 @@ def get_country(file1, value_name="cases"):
     return df
 
 
-def get_country_tests(file1):
-    """Get tests country data from Our World in Data CSV file"""
-    cols = {"name": "location", "date": "date", "tests": "total_tests"}
+def get_country_tests_vaccs(file1):
+    """Get tests/vaccinations country data from Our World in Data CSV file"""
+    cols = {
+        "name": "location",
+        "date": "date",
+        "tests": "total_tests",
+        "vaccinations": "total_vaccinations",
+    }
     df = pd.read_csv(file1)
     df = df[cols.values()]
     df.columns = cols.keys()
@@ -173,8 +183,8 @@ def get_country_pop(url):
 def calc_stats(df, n=7):
     """Calculate average daily change and per million stats"""
     df = df.sort_values("date")
-    out = []
     ind = df.groupby(["type", "name"]).indices
+    out = []
     for k, v in ind.items():
         df1 = df.iloc[v].copy()
         for col in ["cases", "deaths", "tests"]:
@@ -182,9 +192,7 @@ def calc_stats(df, n=7):
         df1["hosp_a"] = df1["hosp"].rolling(n).mean()
         out.append(df1)
     out = pd.concat(out, ignore_index=True)
-    out["positivity"] = out["cases"] / out["tests"] * 100
-    out["positivity_ac"] = out["cases_ac"] / out["tests_ac"] * 100
-    cols_to_rate = [
+    cols_rate = [
         "cases",
         "deaths",
         "tests",
@@ -192,8 +200,9 @@ def calc_stats(df, n=7):
         "deaths_ac",
         "tests_ac",
         "hosp_a",
+        "vaccinations",
     ]
-    for col in cols_to_rate:
+    for col in cols_rate:
         out[col + "_pm"] = out[col] / out["pop"] * 1e06
     return out
 
