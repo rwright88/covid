@@ -1,5 +1,6 @@
 """Create dataset, upload to S3, restart heroku dyno"""
 
+import datetime
 import os
 import subprocess
 import time
@@ -18,6 +19,8 @@ HEROKU_APP = "rwright-covid"
 
 
 def main():
+    print(f"\n-----\nScript started at: {datetime.datetime.now()}")
+
     t0 = time.time()
     dir_name = os.path.dirname(OUT_DATA)
     if not os.path.isdir(dir_name):
@@ -39,6 +42,8 @@ def main():
     t0 = time.time()
     subprocess.run(["heroku", "dyno:restart", "--app", HEROKU_APP], shell=True)
     print(f"Restarting Heroku dyno took: {str(int(time.time() - t0))} seconds")
+
+    print(f"Script completed at: {datetime.datetime.now()}\n-----\n")
 
 
 if __name__ == "__main__":
