@@ -187,19 +187,21 @@ def calc_stats(df, n=7):
     out = []
     for k, v in ind.items():
         df1 = df.iloc[v].copy()
-        for col in ["cases", "deaths", "tests"]:
+        for col in ["cases", "deaths", "tests", "vaccinations"]:
             df1[col + "_ac"] = average_change(df1[col], n=n)
         df1["hosp_a"] = df1["hosp"].rolling(n).mean()
         out.append(df1)
     out = pd.concat(out, ignore_index=True)
     cols_rate = [
-        "cases",
-        "deaths",
-        "tests",
         "cases_ac",
+        "cases",
         "deaths_ac",
-        "tests_ac",
+        "deaths",
         "hosp_a",
+        "hosp",
+        "tests_ac",
+        "tests",
+        "vaccinations_ac",
         "vaccinations",
     ]
     for col in cols_rate:
