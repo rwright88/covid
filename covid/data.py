@@ -1,5 +1,4 @@
 """Functions to create datasets."""
-# TODO: Should county rows with missing code or name be excluded? (currently yes)
 
 import io
 

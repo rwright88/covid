@@ -1,6 +1,6 @@
 # covid
 
-Create COVID-19 datasets.
+Script to create COVID-19 datasets. View data [here](https://rwright-covid.herokuapp.com/).
 
 ## Sources
 
