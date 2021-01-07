@@ -19,10 +19,11 @@ IN_COUNTY_DEATHS = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/ma
 IN_STATE = "http://covidtracking.com/api/states/daily.csv"
 IN_STATE_CW = "data/state-postal.csv"
 IN_STATE_POP = "https://en.wikipedia.org/wiki/List_of_states_and_territories_of_the_United_States_by_population"
+IN_STATE_VACC = "https://raw.githubusercontent.com/govex/COVID-19/master/data_tables/vaccine_data/raw_data/vaccine_data_us_state_timeline.csv"
 
 
 def get_data(n=7):
-    """Get cases, deaths, and tests data for countries, states, and counties"""
+    """Get covid data for countries, states, and counties"""
     county_cases = get_county(IN_COUNTY_CASES, value_name="cases")
     county_deaths = get_county(IN_COUNTY_DEATHS, value_name="deaths")
     by = ["code", "county", "state", "date"]
@@ -35,6 +36,8 @@ def get_data(n=7):
     df = df[["type", "code", "name", "date", "pop", "cases", "deaths"]]
 
     state = get_state(IN_STATE)
+    state_vacc = get_state_vaccs(IN_STATE_VACC)
+    state = pd.merge(state, state_vacc, how="left", on=["name", "date"])
     state_pop = get_state_pop(IN_STATE_POP)
     state_pop = pd.merge(
         state_pop, cw, how="left", left_on="name", right_on="state_name"
@@ -123,6 +126,21 @@ def get_state(url):
     df["type"] = "state"
     df = df[["type"] + col]
     # df = fill_dates(df, name="name")
+    return df
+
+
+def get_state_vaccs(file1):
+    """Get vaccination state data from Centers for Civic Impact"""
+    cols = {
+        "name": "stabbr",
+        "date": "date",
+        "vaccinations": "doses_admin_total",
+    }
+    df = pd.read_csv(file1)
+    df = df[cols.values()]
+    df.columns = cols.keys()
+    df["date"] = pd.to_datetime(df["date"])
+    df["name"] = fix_string(df["name"])
     return df
 
 

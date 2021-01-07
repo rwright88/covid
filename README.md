@@ -23,7 +23,7 @@ US states         | Cases        | https://covidtracking.com/data
 US states         | Deaths       | https://covidtracking.com/data
 US states         | Tests        | https://covidtracking.com/data
 US states         | Hospitalized | https://covidtracking.com/data
-US states         | Vaccinations | NA
+US states         | Vaccinations | https://github.com/govex/COVID-19
 US counties       | Cases        | https://github.com/CSSEGISandData/COVID-19
 US counties       | Deaths       | https://github.com/CSSEGISandData/COVID-19
 US counties       | Tests        | NA
