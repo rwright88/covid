@@ -141,6 +141,7 @@ def get_state_vaccs(file1):
     df.columns = cols.keys()
     df["date"] = pd.to_datetime(df["date"])
     df["name"] = fix_string(df["name"])
+    df = df.drop_duplicates(["name", "date"])
     return df
 
 

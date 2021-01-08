@@ -6,6 +6,7 @@ Script to create COVID-19 datasets. View data [here](https://rwright-covid.herok
 
 - https://covidtracking.com/data
 - https://github.com/CSSEGISandData/COVID-19
+- https://github.com/govex/COVID-19
 - https://github.com/owid/covid-19-data/tree/master/public/data
 
 ## Sources by geography and type
