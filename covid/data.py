@@ -19,7 +19,7 @@ IN_COUNTY_DEATHS = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/ma
 IN_STATE = "http://covidtracking.com/api/states/daily.csv"
 IN_STATE_CW = "data/state-postal.csv"
 IN_STATE_POP = "https://en.wikipedia.org/wiki/List_of_states_and_territories_of_the_United_States_by_population"
-IN_STATE_VACC = "https://raw.githubusercontent.com/govex/COVID-19/master/data_tables/vaccine_data/raw_data/vaccine_data_us_state_timeline.csv"
+IN_STATE_VACC = "https://raw.githubusercontent.com/govex/COVID-19/master/data_tables/vaccine_data/us_data/time_series/vaccine_data_us_timeline.csv"
 
 
 def get_data(n=7):
@@ -28,19 +28,24 @@ def get_data(n=7):
     county_deaths = get_county(IN_COUNTY_DEATHS, value_name="deaths")
     by = ["code", "county", "state", "date"]
     df = pd.merge(county_cases, county_deaths, how="left", on=by)
-    cw = pd.read_csv(IN_STATE_CW)
-    cw["state_code"] = fix_string(cw["state_code"])
-    df = pd.merge(df, cw, how="left", left_on="state", right_on="state_name")
+    state_cw = pd.read_csv(IN_STATE_CW)
+    state_cw["state_code"] = fix_string(state_cw["state_code"])
+    df = pd.merge(df, state_cw, how="left", left_on="state", right_on="state_name")
     df["name"] = [s + ", " + c for s, c in zip(df["state_code"], df["county"])]
     df["type"] = "county"
     df = df[["type", "code", "name", "date", "pop", "cases", "deaths"]]
 
     state = get_state(IN_STATE)
     state_vacc = get_state_vaccs(IN_STATE_VACC)
+    state_vacc = pd.merge(
+        state_vacc, state_cw, how="left", left_on="state", right_on="state_name"
+    )
+    state_vacc = state_vacc[["state_code", "date", "vaccinations"]]
+    state_vacc.columns = ["name", "date", "vaccinations"]
     state = pd.merge(state, state_vacc, how="left", on=["name", "date"])
     state_pop = get_state_pop(IN_STATE_POP)
     state_pop = pd.merge(
-        state_pop, cw, how="left", left_on="name", right_on="state_name"
+        state_pop, state_cw, how="left", left_on="name", right_on="state_name"
     )
     state_pop = state_pop[["state_code", "pop"]]
     state = pd.merge(
@@ -132,16 +137,18 @@ def get_state(url):
 def get_state_vaccs(file1):
     """Get vaccination state data from Centers for Civic Impact"""
     cols = {
-        "name": "stabbr",
-        "date": "date",
-        "vaccinations": "doses_admin_total",
+        "state": "Province_State",
+        "date": "Date",
+        "vaccine_type": "Vaccine_Type",
+        "vaccinations": "Stage_One_Doses",
     }
     df = pd.read_csv(file1)
     df = df[cols.values()]
     df.columns = cols.keys()
+    df = df[df["vaccine_type"] == "All"].drop("vaccine_type", axis=1)
     df["date"] = pd.to_datetime(df["date"])
-    df["name"] = fix_string(df["name"])
-    df = df.drop_duplicates(["name", "date"])
+    df["state"] = fix_string(df["state"])
+    df = df.drop_duplicates(["state", "date"])
     return df
 
 
