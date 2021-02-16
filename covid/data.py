@@ -184,7 +184,7 @@ def get_country_tests_vaccs(file1):
         "name": "location",
         "date": "date",
         "tests": "total_tests",
-        "vaccinations": "total_vaccinations",
+        "vaccinations": "people_vaccinated",
     }
     df = pd.read_csv(file1)
     df = df[cols.values()]
