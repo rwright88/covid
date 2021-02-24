@@ -8,42 +8,29 @@ import requests
 
 from covid.utils import fill_dates
 
-IN_COUNTRY_CASES = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
-IN_COUNTRY_DEATHS = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
-IN_COUNTRY_TESTS = "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv"
-IN_COUNTRY_POP = (
-    "https://en.wikipedia.org/wiki/List_of_countries_and_dependencies_by_population"
-)
-IN_COUNTY_CASES = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv"
-IN_COUNTY_DEATHS = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv"
-IN_STATE = "http://covidtracking.com/api/states/daily.csv"
-IN_STATE_CW = "data/state-postal.csv"
-IN_STATE_POP = "https://en.wikipedia.org/wiki/List_of_states_and_territories_of_the_United_States_by_population"
-IN_STATE_VACC = "https://raw.githubusercontent.com/govex/COVID-19/master/data_tables/vaccine_data/us_data/time_series/vaccine_data_us_timeline.csv"
-
 
 def get_data(n=7):
     """Get covid data for countries, states, and counties"""
-    county_cases = get_county(IN_COUNTY_CASES, value_name="cases")
-    county_deaths = get_county(IN_COUNTY_DEATHS, value_name="deaths")
+    county_cases = get_county(value_name="cases")
+    county_deaths = get_county(value_name="deaths")
     by = ["code", "county", "state", "date"]
     df = pd.merge(county_cases, county_deaths, how="left", on=by)
-    state_cw = pd.read_csv(IN_STATE_CW)
+    state_cw = pd.read_csv("data/state-postal.csv")
     state_cw["state_code"] = fix_string(state_cw["state_code"])
     df = pd.merge(df, state_cw, how="left", left_on="state", right_on="state_name")
     df["name"] = [s + ", " + c for s, c in zip(df["state_code"], df["county"])]
     df["type"] = "county"
     df = df[["type", "code", "name", "date", "pop", "cases", "deaths"]]
 
-    state = get_state(IN_STATE)
-    state_vacc = get_state_vaccs(IN_STATE_VACC)
+    state = get_state()
+    state_vacc = get_state_vaccs()
     state_vacc = pd.merge(
         state_vacc, state_cw, how="left", left_on="state", right_on="state_name"
     )
     state_vacc = state_vacc[["state_code", "date", "vaccinations"]]
     state_vacc.columns = ["name", "date", "vaccinations"]
     state = pd.merge(state, state_vacc, how="left", on=["name", "date"])
-    state_pop = get_state_pop(IN_STATE_POP)
+    state_pop = get_state_pop()
     state_pop = pd.merge(
         state_pop, state_cw, how="left", left_on="name", right_on="state_name"
     )
@@ -55,7 +42,7 @@ def get_data(n=7):
 
     us_tests = state[["date", "tests"]].groupby("date").sum().reset_index()
     us_tests["name"] = "united states"
-    country_tv = get_country_tests_vaccs(IN_COUNTRY_TESTS)
+    country_tv = get_country_tests_vaccs()
     country_tests = country_tv[country_tv["name"] != "united states"].drop(
         "vaccinations", axis=1
     )
@@ -66,11 +53,11 @@ def get_data(n=7):
 
     country_vacc = country_tv.drop("tests", axis=1)
 
-    country_cases = get_country(IN_COUNTRY_CASES, value_name="cases")
-    country_deaths = get_country(IN_COUNTRY_DEATHS, value_name="deaths")
+    country_cases = get_country(value_name="cases")
+    country_deaths = get_country(value_name="deaths")
     country = pd.merge(country_cases, country_deaths, how="left", on=["name", "date"])
     country["type"] = "country"
-    country_pop = get_country_pop(IN_COUNTRY_POP)
+    country_pop = get_country_pop()
     country = pd.merge(country, country_pop, how="left", on="name")
     country = pd.merge(country, country_tests, how="left", on=["name", "date"])
     country = pd.merge(country, us_hosp, how="left", on=["name", "date"])
@@ -87,15 +74,20 @@ def get_data(n=7):
     return df
 
 
-def get_county(file1, value_name="cases"):
+def get_county(value_name="cases"):
     """Get cases or deaths county data from Johns Hopkins CSV file"""
-    df = pd.read_csv(file1)
     cols_id = {"code": "FIPS", "county": "Admin2", "state": "Province_State"}
     if value_name == "cases":
+        path = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv"
+        df = pd.read_csv(path)
         cols_dates = {x: x for x in df.columns.tolist()[11:]}
     elif value_name == "deaths":
+        path = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv"
+        df = pd.read_csv(path)
         cols_id["pop"] = "Population"
         cols_dates = {x: x for x in df.columns.tolist()[12:]}
+    else:
+        raise ValueError("Invalid value_name")
     cols = {**cols_id, **cols_dates}
     df = df[cols.values()]
     df.columns = cols.keys()
@@ -108,8 +100,9 @@ def get_county(file1, value_name="cases"):
     return df
 
 
-def get_state(url):
+def get_state():
     """Get state data from Covid Tracking project"""
+    url = "http://covidtracking.com/api/states/daily.csv"
     r = requests.get(url)
     data = io.StringIO(r.text)
     df = pd.read_csv(data)
@@ -134,15 +127,16 @@ def get_state(url):
     return df
 
 
-def get_state_vaccs(file1):
+def get_state_vaccs():
     """Get vaccination state data from Centers for Civic Impact"""
+    path = "https://raw.githubusercontent.com/govex/COVID-19/master/data_tables/vaccine_data/us_data/time_series/vaccine_data_us_timeline.csv"
     cols = {
         "state": "Province_State",
         "date": "Date",
         "vaccine_type": "Vaccine_Type",
         "vaccinations": "Stage_One_Doses",
     }
-    df = pd.read_csv(file1)
+    df = pd.read_csv(path)
     df = df[cols.values()]
     df.columns = cols.keys()
     df = df[df["vaccine_type"] == "All"].drop("vaccine_type", axis=1)
@@ -152,8 +146,9 @@ def get_state_vaccs(file1):
     return df
 
 
-def get_state_pop(url):
+def get_state_pop():
     """Get state populations from Wikipedia"""
+    url = "https://en.wikipedia.org/wiki/List_of_states_and_territories_of_the_United_States_by_population"
     r = requests.get(url)
     df = pd.read_html(r.text)[0]
     df = df.iloc[:52, [2, 3]]
@@ -163,9 +158,15 @@ def get_state_pop(url):
     return df
 
 
-def get_country(file1, value_name="cases"):
+def get_country(value_name="cases"):
     """Get cases or deaths country data from Johns Hopkins CSV file"""
-    df = pd.read_csv(file1)
+    if value_name == "cases":
+        path = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
+    elif value_name == "deaths":
+        path = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
+    else:
+        raise ValueError("Invalid value_name")
+    df = pd.read_csv(path)
     cols_id = {"name": "Country/Region"}
     cols_dates = cols_dates = {x: x for x in df.columns.tolist()[4:]}
     cols = {**cols_id, **cols_dates}
@@ -178,15 +179,16 @@ def get_country(file1, value_name="cases"):
     return df
 
 
-def get_country_tests_vaccs(file1):
+def get_country_tests_vaccs():
     """Get tests/vaccinations country data from Our World in Data CSV file"""
+    path = "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv"
     cols = {
         "name": "location",
         "date": "date",
         "tests": "total_tests",
         "vaccinations": "people_vaccinated",
     }
-    df = pd.read_csv(file1)
+    df = pd.read_csv(path)
     df = df[cols.values()]
     df.columns = cols.keys()
     df["date"] = pd.to_datetime(df["date"])
@@ -194,8 +196,11 @@ def get_country_tests_vaccs(file1):
     return df
 
 
-def get_country_pop(url):
+def get_country_pop():
     """Get country populations from Wikipedia"""
+    url = (
+        "https://en.wikipedia.org/wiki/List_of_countries_and_dependencies_by_population"
+    )
     r = requests.get(url)
     df = pd.read_html(r.text)[0]
     df = df.iloc[:, [1, 2]]
