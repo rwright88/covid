@@ -2,3 +2,5 @@
 .vscode
 *.pyc
 out
+conda-env
+.DS_Store

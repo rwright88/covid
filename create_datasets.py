@@ -40,7 +40,7 @@ def main():
     print(f"Uploading file to S3 took: {str(int(time.time() - t0))} seconds")
 
     t0 = time.time()
-    subprocess.run(["heroku", "dyno:restart", "--app", HEROKU_APP], shell=True)
+    subprocess.run(["heroku", "dyno:restart", "--app", HEROKU_APP])
     print(f"Restarting Heroku dyno took: {str(int(time.time() - t0))} seconds")
 
     print(f"Script completed at: {datetime.datetime.now()}\n-----\n")
