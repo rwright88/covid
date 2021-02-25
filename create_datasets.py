@@ -1,4 +1,4 @@
-"""Create dataset, upload to S3, restart heroku dyno"""
+"""Create dataset and upload to S3"""
 
 import datetime
 import os
@@ -15,7 +15,6 @@ N = 7
 OUT_DATA = "out/covid.csv"
 S3_BUCKET = "rwright-covid"
 S3_OBJECT = "covid.csv"
-HEROKU_APP = "rwright-covid"
 
 
 def main():
@@ -38,10 +37,6 @@ def main():
     s3 = boto3.resource("s3")
     s3.meta.client.upload_file(OUT_DATA, S3_BUCKET, S3_OBJECT)
     print(f"Uploading file to S3 took: {str(int(time.time() - t0))} seconds")
-
-    t0 = time.time()
-    subprocess.run(["heroku", "dyno:restart", "--app", HEROKU_APP])
-    print(f"Restarting Heroku dyno took: {str(int(time.time() - t0))} seconds")
 
     print(f"Script completed at: {datetime.datetime.now()}\n-----\n")
 
