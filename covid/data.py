@@ -241,7 +241,7 @@ def calc_stats(df, n=7):
 
 def fix_string(x):
     out = x.str.lower()
-    out = out.str.replace("\[[^\]]*\]", "")
+    out = out.str.replace("\[[^\]]*\]", "", regex=True)
     out = out.str.strip()
     return out
 
