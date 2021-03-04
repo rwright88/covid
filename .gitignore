@@ -1,6 +1,6 @@
+.DS_Store
 .venv
 .vscode
 *.pyc
-out
 conda-env
-.DS_Store
+out
