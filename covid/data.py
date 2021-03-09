@@ -40,28 +40,10 @@ def get_data(n=7):
     ).drop("state_code", axis=1)
     df = pd.concat([df, state], ignore_index=True)
 
-    us_tests = state[["date", "tests"]].groupby("date").sum().reset_index()
-    us_tests["name"] = "united states"
-    country_tv = get_country_tests_vaccs()
-    country_tests = country_tv[country_tv["name"] != "united states"].drop(
-        "vaccinations", axis=1
-    )
-    country_tests = pd.concat([country_tests, us_tests], ignore_index=True)
-
-    us_hosp = state[["date", "hosp"]].groupby("date").sum().reset_index()
-    us_hosp["name"] = "united states"
-
-    country_vacc = country_tv.drop("tests", axis=1)
-
-    country_cases = get_country(value_name="cases")
-    country_deaths = get_country(value_name="deaths")
-    country = pd.merge(country_cases, country_deaths, how="left", on=["name", "date"])
+    country = get_country()
     country["type"] = "country"
     country_pop = get_country_pop()
     country = pd.merge(country, country_pop, how="left", on="name")
-    country = pd.merge(country, country_tests, how="left", on=["name", "date"])
-    country = pd.merge(country, us_hosp, how="left", on=["name", "date"])
-    country = pd.merge(country, country_vacc, how="left", on=["name", "date"])
     df = pd.concat([df, country], ignore_index=True)
 
     world = df[df["type"] == "country"].groupby("date").sum().reset_index()
@@ -158,34 +140,16 @@ def get_state_pop():
     return df
 
 
-def get_country(value_name="cases"):
-    """Get cases or deaths country data from Johns Hopkins CSV file"""
-    if value_name == "cases":
-        path = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
-    elif value_name == "deaths":
-        path = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
-    else:
-        raise ValueError("Invalid value_name")
-    df = pd.read_csv(path)
-    cols_id = {"name": "Country/Region"}
-    cols_dates = cols_dates = {x: x for x in df.columns.tolist()[4:]}
-    cols = {**cols_id, **cols_dates}
-    df = df[cols.values()]
-    df.columns = cols.keys()
-    df = pd.melt(df, id_vars=cols_id, var_name="date", value_name=value_name)
-    df["date"] = pd.to_datetime(df["date"])
-    df["name"] = fix_country(df["name"])
-    df = df.groupby(["name", "date"]).sum().reset_index()
-    return df
-
-
-def get_country_tests_vaccs():
-    """Get tests/vaccinations country data from Our World in Data CSV file"""
+def get_country():
+    """Get country data from Our World in Data CSV file"""
     path = "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv"
     cols = {
         "name": "location",
         "date": "date",
+        "cases": "total_cases",
+        "deaths": "total_deaths",
         "tests": "total_tests",
+        "hosp": "hosp_patients",
         "vaccinations": "people_vaccinated",
     }
     df = pd.read_csv(path)
