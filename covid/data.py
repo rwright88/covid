@@ -29,7 +29,7 @@ def get_data(n=7):
     )
     state_vacc = state_vacc[["state_code", "date", "vaccinations"]]
     state_vacc.columns = ["name", "date", "vaccinations"]
-    state = pd.merge(state, state_vacc, how="left", on=["name", "date"])
+    state = pd.merge(state, state_vacc, how="outer", on=["name", "date"])
     state_pop = get_state_pop()
     state_pop = pd.merge(
         state_pop, state_cw, how="left", left_on="name", right_on="state_name"
@@ -38,6 +38,7 @@ def get_data(n=7):
     state = pd.merge(
         state, state_pop, how="left", left_on="name", right_on="state_code"
     ).drop("state_code", axis=1)
+    state["type"] = "state"
     df = pd.concat([df, state], ignore_index=True)
 
     country = get_country()
@@ -102,9 +103,6 @@ def get_state():
     df["code"] = [str(int(e)).zfill(2) for e in df["code"]]
     df["date"] = pd.to_datetime(df["date"].astype(str))
     df["name"] = fix_string(df["name"])
-    col = df.columns.tolist()
-    df["type"] = "state"
-    df = df[["type"] + col]
     # df = fill_dates(df, name="name")
     return df
 
