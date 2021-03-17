@@ -184,6 +184,7 @@ def get_country():
     """Get country data from Our World in Data"""
     path = "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv"
     cols = {
+        "code": "iso_code",
         "name": "location",
         "date": "date",
         "cases": "total_cases",
