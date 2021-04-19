@@ -52,12 +52,6 @@ def get_data(n=7):
     country = pd.merge(country, country_pop, how="left", on="name")
     df = pd.concat([df, country], ignore_index=True)
 
-    world = df[df["type"] == "country"].groupby("date").sum().reset_index()
-    world["name"] = "world"
-    world["type"] = "country"
-    world = world.drop(["tests", "hosp", "vaccinations"], axis=1)
-    df = pd.concat([df, world], ignore_index=True)
-
     df = calc_stats(df, n=n)
     return df
 
