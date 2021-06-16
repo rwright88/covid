@@ -250,6 +250,7 @@ def fix_date(x):
 def fix_string(x):
     out = x.str.lower()
     out = out.str.replace("\[[^\]]*\]", "", regex=True)
+    out = out.str.replace("†", "", regex=True)
     out = out.str.strip()
     return out
 
