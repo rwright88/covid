@@ -204,6 +204,7 @@ def get_country_pop():
     df = pd.read_html(r.text)[0]
     df = df.iloc[:, [1, 3]]
     df.columns = ["name", "pop"]
+    df = df[df["name"].notna()]
     df["name"] = fix_country(df["name"])
     df["pop"] = pd.to_numeric(df["pop"], errors="coerce")
     return df
