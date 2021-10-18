@@ -166,7 +166,7 @@ def get_state_pop():
     """Get state populations from Wikipedia"""
     url = "https://en.wikipedia.org/wiki/List_of_states_and_territories_of_the_United_States_by_population"
     r = requests.get(url)
-    df = pd.read_html(r.text)[1]
+    df = pd.read_html(r.text)[0]
     df = df.iloc[:52, [2, 3]]
     df.columns = ["name", "pop"]
     df["name"] = fix_string(df["name"])
