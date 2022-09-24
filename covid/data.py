@@ -144,19 +144,18 @@ def get_state_hosp():
 
 def get_state_vaccs():
     """Get vaccination state data from Centers for Civic Impact"""
-    path = "https://raw.githubusercontent.com/govex/COVID-19/master/data_tables/vaccine_data/us_data/time_series/vaccine_data_us_timeline.csv"
+    path = "https://raw.githubusercontent.com/govex/COVID-19/master/data_tables/vaccine_data/us_data/time_series/time_series_covid19_vaccine_us.csv"
     cols = {
         "state": "Province_State",
         "date": "Date",
-        "vaccine_type": "Vaccine_Type",
-        "vaccinations": "Stage_One_Doses",
+        "vaccinations": "Doses_admin",
     }
     df = pd.read_csv(path)
     df = df[cols.values()]
     df.columns = cols.keys()
-    df = df[df["vaccine_type"] == "All"].drop("vaccine_type", axis=1)
     df["date"] = fix_date(df["date"])
     df["state"] = fix_string(df["state"])
+    df = df[df["state"].notna()]
     df = df.drop_duplicates(["state", "date"])
     # df = fill_dates(df, name="name")
     return df
@@ -185,7 +184,7 @@ def get_country():
         "deaths": "total_deaths",
         "tests": "total_tests",
         "hosp": "hosp_patients",
-        "vaccinations": "people_vaccinated",
+        "vaccinations": "total_vaccinations",
     }
     df = pd.read_csv(path)
     df = df[cols.values()]
