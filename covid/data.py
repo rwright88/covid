@@ -200,8 +200,8 @@ def get_country_pop():
         "https://en.wikipedia.org/wiki/List_of_countries_and_dependencies_by_population"
     )
     r = requests.get(url)
-    df = pd.read_html(r.text)[1]
-    df = df.iloc[:, [1, 3]]
+    df = pd.read_html(r.text)[0]
+    df = df.iloc[:, [1, 2]]
     df.columns = ["name", "pop"]
     df = df[df["name"].notna()]
     df["name"] = fix_country(df["name"])
