@@ -97,7 +97,21 @@ def get_state_cases_deaths():
     df["name"] = fix_state(df["name"])
     df["date"] = fix_date(df["date"])
     df = df.groupby(["name", "date"]).sum(min_count=1).reset_index()
-    # df = fill_dates(df, name="name")
+    path_weekly = "https://data.cdc.gov/api/views/pwn4-m3yp/rows.csv?accessType=DOWNLOAD"
+    cols_weekly = {
+        "name": "state",
+        "date": "date_updated",
+        "cases": "tot_cases",
+        "deaths": "tot_deaths",
+    }
+    df_weekly = pd.read_csv(path_weekly)
+    df_weekly = df_weekly[cols_weekly.values()]
+    df_weekly.columns = cols_weekly.keys()
+    df_weekly["name"] = fix_state(df_weekly["name"])
+    df_weekly["date"] = fix_date(df_weekly["date"])
+    df_weekly = df_weekly[df_weekly["date"] >= "2022-10-20"]
+    df = pd.concat([df, df_weekly], ignore_index=True)
+    df = fill_dates(df, name="name")
     return df
 
 
