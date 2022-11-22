@@ -24,7 +24,7 @@ def main():
     if not os.path.isdir(dir_name):
         os.makedirs(dir_name, exist_ok=True)
     df = covid.get_data(n=N)
-    df = df[(df["date"] >= "2020-03-01") & df["pop"].notna()]
+    df = df[(df["date"] >= "2020-03-01") & df["pop"].notna() & (df["type"] != "county")]
     df = df.round(2)
     elapsed = int(time.time() - t0)
     print(f"{datetime.datetime.now()} Getting data took: {str(elapsed)} seconds")
