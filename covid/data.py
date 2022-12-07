@@ -179,7 +179,9 @@ def get_state_pop():
     """Get state populations from Wikipedia"""
     url = "https://en.wikipedia.org/wiki/List_of_states_and_territories_of_the_United_States_by_population"
     r = requests.get(url)
-    df = pd.read_html(r.text)[0]
+    data = pd.read_html(r.text)
+    n_cols = [df.shape[1] for df in data]
+    df = data[np.argmax(n_cols)]
     df = df.iloc[:52, [2, 3]]
     df.columns = ["name", "pop"]
     df["name"] = fix_string(df["name"])
@@ -214,7 +216,9 @@ def get_country_pop():
         "https://en.wikipedia.org/wiki/List_of_countries_and_dependencies_by_population"
     )
     r = requests.get(url)
-    df = pd.read_html(r.text)[1]
+    data = pd.read_html(r.text)
+    sizes = [df.memory_usage(deep=True).sum() for df in data]
+    df = data[np.argmax(sizes)]
     df = df.iloc[:, [1, 2]]
     df.columns = ["name", "pop"]
     df = df[df["name"].notna()]
